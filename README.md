@@ -15,6 +15,7 @@
 
 Starting from the **online anomaly detection** requirements for real-world event sequences, we revisit existing detection paradigms and benchmarks. Real-world event streams are marked by high throughput, low latency, and continuously changing distributions — traditional offline batch evaluation fails to fully reflect model performance in online scenarios.
 
+
 Our project focuses on addressing this gap, with the following goals:
 
 * 🎯 **Core Requirements Definition**: Clarify key metrics for streaming anomaly detection — online inference latency, throughput, anomaly detection capability, and delayed alerting performance.
