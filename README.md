@@ -1,5 +1,5 @@
 <p align="center">
-<img width="500" src="assets/TSAD_sample.png"/>
+<img width="500" src="assets/TSAD_sample.svg"/>
 </p>
 
 
