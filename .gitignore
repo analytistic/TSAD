@@ -1,0 +1,24 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+
+# data 
+data/*
+
+# checkpoints
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.h5
+*.safetensors
+
+
