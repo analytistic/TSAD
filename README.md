@@ -1,8 +1,8 @@
+<p align="center">
+<img width="500" src="assets/TSAD.png"/>
+</p>
 
 
-<div style="text-align:center; margin:20px 0; display:grid; place-items:center; min-height:100px;">
-  <img id="12" src="assets/TSAD.png" alt="TSAD" style="width:70%; object-fit:contain;" />
-</div>
 <h1 align="center">TSAD</h1>
 
 <h2 align="center">Online Anomaly Detection for Event Streams: Paradigms, Benchmarks & Evaluator</h2>
