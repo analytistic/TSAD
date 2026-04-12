@@ -20,5 +20,6 @@ data/*
 *.bin
 *.h5
 *.safetensors
+output/
 
 

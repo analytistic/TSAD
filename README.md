@@ -23,4 +23,25 @@ Our project focuses on addressing this gap, with the following goals:
 * 🧪 **Reproducible Baselines**: Provide data preparation scripts, real event sequence samples from \`data/TSB-AD-U\`, and standardized online train/test splitting strategies.
 * ⚡ **Lightweight Evaluator**: Release a streamlined streaming evaluator for end-to-end evaluation in real engineering pipelines (jointly measuring latency, throughput, and accuracy).
 
-**TODO**
+
+<h2 align="center">Framework</h2>
+Our Framework is like:
+<p align="center">
+<img width="500" src="assets/Framework.png"/>
+</p>
+
+
+
+Our framework is highly modular and designed to seamlessly bridge the gap between traditional offline evaluation and real-world streaming deployments. It consists of three core decoupled components:
+
+1. 🛠️ **Configuration & Data Ingestion**:
+   -  Leverages `.toml` files and Python `dataclasses` for rigid, reproducible hyper-parameter injection.
+   -  Automatically parses dataset metadata (e.g., train/test split timestamps) and converts raw event streams into standardized structured formats.
+
+2. 🧩 **Model Registration Center (The Central Hub)**:
+   -  Inspired by the Hugging Face `AutoModel` paradigm, it features a plug-and-play architecture with `PROCESSOR_REGISTRY` and `MODEL_REGISTRY`.
+   -  Dynamically binds the appropriate data preprocessor (for on-the-fly sliding-window feature extraction) with the core algorithmic base.
+
+3. 🛤️ **Dual Evaluation Pipelines**:
+   -  **Offline Batch Pipeline (Baseline)**: Evaluates models using static, whole-dataset processing with global convergence and standard global metrics.
+   - **Online Streaming Pipeline (Proposed)**: Simulates real-world continuous data arrival. Models undergo incremental state updating, and performance is measured using our customized **Delay-Aware Streaming Metrics** to actively penalize late detections.

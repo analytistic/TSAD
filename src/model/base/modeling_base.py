@@ -1,7 +1,8 @@
 from transformers import PreTrainedModel
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
-class BaseTASDModel(PreTrainedModel):
+class BaseTASDModel(PreTrainedModel, ABC):
+
     def __init__(self, config):
         super().__init__(config)
         self.config = config
@@ -10,9 +11,9 @@ class BaseTASDModel(PreTrainedModel):
     def fit(self, *args, **kwargs):
         raise NotImplementedError
     
-    # @abstractmethod
-    # def partial_fit(self, stream_data, **kwargs):
-    #     raise NotImplementedError
+    @abstractmethod
+    def partial_fit(self, *args, **kwargs):
+        raise NotImplementedError
     
 
     @abstractmethod

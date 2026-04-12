@@ -8,12 +8,6 @@ import toml
 
 @dataclass
 class DataArguments:
-    datasets: str = field(
-        default="",
-        metadata={
-            "help": "data name "
-        },
-    )
     data_path: str = field(
         default="",
         metadata={

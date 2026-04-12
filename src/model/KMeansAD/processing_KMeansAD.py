@@ -6,6 +6,8 @@ from ..utils.scaler import ScalerType, StandaryScaler, MinMaxScaler, BaseScaler
 from numpy.lib.stride_tricks import sliding_window_view
 from .. import register_processor
 from ..base.processing_base import BaseProcessor
+from datasets import Dataset
+from ...dataset import DatasetFeature
 
 @register_processor("KMeansAD")
 class KMeansADProcessor(BaseProcessor):
@@ -49,33 +51,27 @@ class KMeansADProcessor(BaseProcessor):
 
     
     def __call__(self, 
-                 timeseries: np.ndarray, 
-                 timestamp: Optional[np.ndarray] = None,
+                 timeseries: np.ndarray | List | None = None,
+                 timeslide: np.ndarray | List | None = None, 
+                 timestamp: np.ndarray | List | None = None,
                  ex_features: np.ndarray | None = None,
                  labels: np.ndarray | None = None,
                  scale: Optional[bool] = None, 
                  return_tensors: str = 'pt', 
                  **kwargs) -> BatchFeature:
+        """
+        if timeslide is provided, use timeslide directly and ignore timeseries and timestamp. Otherwise, compute timeslide from timeseries and timestamp.
+        """
+        if timeseries is None and timeslide is None:
+            raise ValueError("At least one of timeseries or timeslide must be provided.")
+        
+        timeslide = np.array(timeslide) if timeslide is not None else self._slide_window(np.array(timeseries))
+        if timeslide.shape[0] == self.window_size:
+            timeslide = timeslide[None, ...]
+        timeslide = self.transform(timeslide)
+
         outputs = {}
-        scale = scale if scale is not None else self.scale
-
-        if timestamp is not None:
-            timestamp = np.array(timestamp.astype('int64'), dtype=np.int64)
-        else:
-            timestamp = np.arange(len(timeseries)) if isinstance(timeseries, list) else np.arange(timeseries.shape[0])
-
-        labels = np.array(labels) if labels is not None else None
-        if self.scaler is not None and self.scale:
-            timeseries = self.scaler.transform(timeseries) if scale else timeseries
-
-        flat_shape = (timeseries.shape[0] - (self.window_size - 1), -1)  # in case we have a multivariate TS
-        timeslides = sliding_window_view(timeseries, window_shape=self.window_size, axis=0).reshape(flat_shape)[::self.stride, :]
-        self.padding_length = timeseries.shape[0] - (timeslides.shape[0] * self.stride + self.window_size - self.stride)
-
-        outputs["timeseries"] = timeseries
-        outputs["timestamp"] = timestamp
-        outputs["timeslides"] = timeslides
-        outputs["labels"] = labels
+        outputs[DatasetFeature.TIMESLIDE.value] = timeslide
 
         return BatchFeature(
             data=outputs,
@@ -112,7 +108,39 @@ class KMeansADProcessor(BaseProcessor):
         np.nan_to_num(mapped, copy=False)
         return mapped
     
-    def detect(self, window_scores, padding_length=None):
+    def decode(self, window_scores, padding_length=None):
         padding_length = padding_length if padding_length is not None else self.padding_length
         point_scores = self.get_point_scores(window_scores, self.window_size, self.stride, padding_length)
         return point_scores
+    
+    def _slide_window(self, series: np.ndarray):
+
+        flat_shape = (series.shape[0] - (self.window_size - 1), -1)  # in case we have a multivariate TS
+        slides = sliding_window_view(series, window_shape=self.window_size, axis=0).reshape(flat_shape)[::self.stride, :]
+        self.padding_length = series.shape[0] - (slides.shape[0] * self.stride + self.window_size - self.stride)
+
+        return slides
+
+    
+    def prepare_dataset(self, data: Dataset, **kwargs) -> Dataset:
+
+        def slide_window_for_batch(batch):
+            timeseries = np.array(batch[DatasetFeature.TIMESERIES.value])[:, None]
+            timestamp = np.array(batch[DatasetFeature.TIMESTAMP.value])[:, None]
+            timeslides = self._slide_window(timeseries)
+            timestamp = self._slide_window(timestamp)
+            return {
+                DatasetFeature.TIMESTAMP.value: timestamp.tolist(),
+                DatasetFeature.TIMESLIDE.value: timeslides.tolist(),
+            }
+
+            
+        data = data.map(
+            slide_window_for_batch,
+            batched=True,
+            batch_size=None,
+            load_from_cache_file=False,
+            remove_columns=data.column_names,
+        )
+        return data
+
