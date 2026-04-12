@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+.vscode
 
 # Virtual environments
 .venv
@@ -21,5 +22,6 @@ data/*
 *.h5
 *.safetensors
 output/
+
 
 
