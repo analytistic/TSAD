@@ -23,6 +23,9 @@ data/*
 *.safetensors
 output/
 
+#DS_Store
+.DS_Store
+
 
 
 
