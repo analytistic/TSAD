@@ -10,7 +10,7 @@
 <p align="center">
 <img alt="PyPI" src="https://img.shields.io/pypi/v/ts_ad"> 
 <!--<img alt="PyPI - Downloads" src="https://pepy.tech/badge/ts_ad"> -->
-<img alt="License" src="https://img.shields.io/github/license/analytistic/TSAD">
+<img alt="License" src="https://img.shields.io/github/analytistic/TSAD">
 </p>
 
 Starting from the **online anomaly detection** requirements for real-world event sequences, we revisit existing detection paradigms and benchmarks. Real-world event streams are marked by high throughput, low latency, and continuously changing distributions — traditional offline batch evaluation fails to fully reflect model performance in online scenarios.
