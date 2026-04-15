@@ -1,52 +1,149 @@
-from transformers import PreTrainedModel
+"""
+This function is adapted from [TimeEval-algorithms] by [CodeLionX&wenig]
+Original source: [https://github.com/TimeEval/TimeEval-algorithms]
+"""
+import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
+# from ..utils.utility import zscore
+from ..base.modeling_base import BaseTASDModel
+from ..base.output_base import BaseTASDModelOutput
+from .configuration_RQTAD import RQTADConfig
 from torch import nn
 import torch
+from transformers.training_args import TrainingArguments
+from .. import register_model
+from ..base.processing_base import BaseProcessor
+from datasets import concatenate_datasets
+from ...dataset import DatasetFeature
+from dataclasses import dataclass, field
+from typing import List, Optional
+from scipy.signal import argrelextrema
+
+@dataclass
+class RQTADModelOutput(BaseTASDModelOutput):
+    """
+    Model output for RQTAD.
+    """
+    idx: torch.Tensor | None = None
 
 
 
-class Resbook(nn.Module):
-    def __init__(self, config):
+
+class RQKmeans(nn.Module):
+    def __init__(self, config: RQTADConfig):
         super().__init__()
-        self.config = config
-        self.num_books = config.num_books
-        self.book_size = config.book_size
-        self.feature_dim = config.feature_dim
-        self.codebooks = nn.ModuleList(
-            [
-                nn.Embedding(self.book_size[i], self.feature_dim[i])for i in range(self.num_books)
-            ]
-        )
-        self.peride = config.peride
+        self.k = config.k
+        self.window_size = config.window_size
+        self.codebook = nn.Embedding(self.k, self.window_size)
+        self.n_iter = config.n_iter
+        self.tol = config.tol
 
-        for i in range(self.num_books):
-            nn.init.zeros_(self.codebooks[i].weight)
-            self.codebooks[i].weight.requires_grad = False
+        nn.init.uniform_(self.codebook.weight, a=-1.0, b=1.0)
+        self.codebook.weight.requires_grad = False
 
-    def rotate_by_phase(self, X, idx):
-        r = idx % self.peride
-        return torch.roll(X, shifts=-r, dims=1)
+    def forward(self, X, return_dist=False):
+        # X shape: (n_samples, window_size)
+        distance =  torch.cdist(X, self.codebook.weight)
+        idx = torch.argmin(distance, dim=-1)
+        min_dists = distance.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
+
+        if return_dist:
+            return idx, min_dists
+        else:
+            return idx, None
     
-    def 
 
-    def fit(self, timeseries, timestamp):
-
-    def predict(self, timeseries, timestamp):
-
-        
+    
 
 
 
 
-
-class RQTAD(PreTrainedModel):
-    def __init__(self, config):
+@register_model("RQTAD")
+class RQTAD(BaseTASDModel):
+    def __init__(self, config: RQTADConfig):
         super().__init__(config)
-        self.config = config
-        self.codebook = Resbook(config)
+        self.model = RQKmeans(config)
+
+    def _detect_period(self, data, rank=1)-> int:
+        """
+        calculate the period window of the data by acf
+        """
+        assert data.ndim == 1, "Only support univariate data for period detection"
+        data = data[:min(2000, len(data))]
+
+        base = 3
+        auto_corr = np.correlate(data - np.mean(data), data - np.mean(data), mode='full')[len(data)-1:]
+        auto_corr /= auto_corr[0]
+        auto_corr = auto_corr[base:]
+
+        local_max = argrelextrema(auto_corr, np.greater)[0]
+
+        try:
+            sorted_local_max = np.argsort(auto_corr[local_max])[::-1]    # Ascending order
+            max_local_max = sorted_local_max[0]     # Default
+            if rank == 1: max_local_max = sorted_local_max[0]
+            if rank == 2: 
+                for i in sorted_local_max[1:]: 
+                    if i > sorted_local_max[0]: 
+                        max_local_max = i 
+                        break
+            if rank == 3:
+                for i in sorted_local_max[1:]: 
+                    if i > sorted_local_max[0]: 
+                        id_tmp = i
+                        break
+                for i in sorted_local_max[id_tmp:]:
+                    if i > sorted_local_max[id_tmp]: 
+                        max_local_max = i           
+                        break
+
+            final_period = local_max[max_local_max]+base
+            if final_period>300:
+                return 125
+            return int(final_period)
+        except:
+            return 125
+
+    def partial_fit(self):
+        return 
+
+    def fit(self, train_data, test_data, train_args, processor, **kwargs):
+        all_data = concatenate_datasets([train_data, test_data])
+        window_size = self._detect_period(np.array(all_data[DatasetFeature.TIMESERIES.value]))
+
+        processor.window_size = window_size
+        self.config.window_size = window_size
+        self.model = RQKmeans(self.config)
+        all_data = processor.prepare_dataset(all_data)
+        timeslide = processor(timeslide=all_data[DatasetFeature.TIMESLIDE.value])[DatasetFeature.TIMESLIDE.value].to(self.model.codebook.weight.device, dtype=self.model.codebook.weight.dtype)
+        for _ in range(self.model.n_iter):
+            outputs = self.forward(timeslide, return_dist=True)
+            if outputs.idx is None:
+                raise ValueError("Model forward did not return cluster indices.")
+            new_centers = torch.zeros_like(self.model.codebook.weight, requires_grad=False, device=self.model.codebook.weight.device)
+            new_centers = new_centers.scatter_add_(0, outputs.idx.unsqueeze(-1).expand(-1, timeslide.shape[-1]), timeslide)
+
+            counts = torch.bincount(outputs.idx, minlength=self.model.k)# k,1
+            new_centers[counts==0] = self.model.codebook.weight[counts==0]
+            new_centers[counts!=0] /= counts[counts!=0].unsqueeze(-1)
+
+            shift = torch.norm(self.model.codebook.weight - new_centers, dim=1).max()
+            self.model.codebook.weight.data.copy_(new_centers)
+            if shift < self.model.tol:
+                break
+
+        self.save_pretrained(train_args.output_dir)
+        processor.save_pretrained(train_args.output_dir)
+        return self
+    
+    
+    def forward(self, timeslide, **kwargs):
+        timeslide = timeslide.to(self.model.codebook.weight.device, dtype=self.model.codebook.weight.dtype)
+        idx, dists = self.model(timeslide, return_dist=True)
+        return RQTADModelOutput(
+            sorce=dists,
+            idx=idx
+        )
 
 
-
-
-
-    def forward(self, timeseries, timestamp, **kwargs):
-        return
+  

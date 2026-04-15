@@ -1,0 +1,50 @@
+[data_args]
+data_dir = 'data/TSB-AD-U'
+
+[model_args]
+pretrained_model_name_or_path = "KMeansAD"
+
+
+[model_args.config]
+k=10
+window_size=10
+stride=1
+n_jobs=1
+normalize=true
+n_iter=300
+tol=1e-4
+
+[model_args.processor_config]
+window_size=10
+stride=1
+
+
+[training_args]
+seed = 42
+fp32 = true
+output_dir = "outputs/model_output/KMeansAD/"
+num_train_epochs = 50
+optim = "adamw_torch"
+learning_rate = 1e-4
+weight_decay = 0.01
+lr_scheduler_type = "cosine"
+report_to = "tensorboard"
+log_level = "info"
+log_level_replica = "warning"
+logging_strategy = "steps"
+logging_dir = "outputs/tensorboard/KMeansAD/"
+logging_steps = 10
+logging_first_step = true
+save_strategy = "epoch"
+load_best_model_at_end = true
+metric_for_best_model = "eval_mse"
+greater_is_better = false
+save_total_limit = 1
+eval_strategy = "epoch"
+warmup_ratio = 0.05
+eval_on_start = true 
+per_device_train_batch_size = 64
+per_device_eval_batch_size = 5
+dataloader_num_workers = 1
+dataloader_pin_memory = false
+

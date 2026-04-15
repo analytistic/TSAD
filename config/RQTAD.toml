@@ -1,9 +1,8 @@
 [data_args]
 data_dir = 'data/TSB-AD-U'
-data_path = 'data/TSB-AD-U/001_NAB_id_1_Facility_tr_1007_1st_2014.csv'
 
 [model_args]
-pretrained_model_name_or_path = "KMeansAD"
+pretrained_model_name_or_path = "RQTAD"
 
 
 [model_args.config]
@@ -23,7 +22,7 @@ stride=1
 [training_args]
 seed = 42
 fp32 = true
-output_dir = "outputs/model_output/KMeansAD/"
+output_dir = "outputs/model_output/RQTAD/"
 num_train_epochs = 50
 optim = "adamw_torch"
 learning_rate = 1e-4
@@ -33,7 +32,7 @@ report_to = "tensorboard"
 log_level = "info"
 log_level_replica = "warning"
 logging_strategy = "steps"
-logging_dir = "outputs/tensorboard/KMeansAD/"
+logging_dir = "outputs/tensorboard/RQTAD/"
 logging_steps = 10
 logging_first_step = true
 save_strategy = "epoch"

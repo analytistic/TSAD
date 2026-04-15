@@ -21,6 +21,7 @@ data/*
 *.bin
 *.h5
 *.safetensors
+outputs/
 output/
 
 #DS_Store

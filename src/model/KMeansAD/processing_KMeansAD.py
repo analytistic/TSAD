@@ -89,23 +89,39 @@ class KMeansADProcessor(BaseProcessor):
                     output[key] = value
         return output
     
+    # def get_point_scores(self, window_scores, window_size, stride, padding_length):
+    #     # compute begin and end indices of windows
+    #     begins = np.array([i * stride for i in range(window_scores.shape[0])])
+    #     ends = begins + window_size
+
+    #     # prepare target array
+    #     unwindowed_length = stride * (window_scores.shape[0] - 1) + window_size + padding_length
+    #     mapped = np.full(unwindowed_length, fill_value=np.nan)
+
+    #     # only iterate over window intersections
+    #     indices = np.unique(np.r_[begins, ends])
+    #     for i, j in zip(indices[:-1], indices[1:]):
+    #         window_indices = np.flatnonzero((begins <= i) & (j-1 < ends))
+    #         mapped[i:j] = np.nanmean(window_scores[window_indices])
+
+    #     # replace untouched indices with 0 (especially for the padding at the end)
+    #     np.nan_to_num(mapped, copy=False)
+    #     return mapped
+    
     def get_point_scores(self, window_scores, window_size, stride, padding_length):
-        # compute begin and end indices of windows
-        begins = np.array([i * stride for i in range(window_scores.shape[0])])
+        num_windows = len(window_scores)
+        begins = np.arange(num_windows) * stride
         ends = begins + window_size
+        unwindowed_length = stride * (num_windows - 1) + window_size + padding_length
 
-        # prepare target array
-        unwindowed_length = stride * (window_scores.shape[0] - 1) + window_size + padding_length
-        mapped = np.full(unwindowed_length, fill_value=np.nan)
+        cum = np.zeros(unwindowed_length)
+        cnt = np.zeros(unwindowed_length)
+        for b, e, s in zip(begins, ends, window_scores):
+            cum[b:e] += s
+            cnt[b:e] += 1
 
-        # only iterate over window intersections
-        indices = np.unique(np.r_[begins, ends])
-        for i, j in zip(indices[:-1], indices[1:]):
-            window_indices = np.flatnonzero((begins <= i) & (j-1 < ends))
-            mapped[i:j] = np.nanmean(window_scores[window_indices])
-
-        # replace untouched indices with 0 (especially for the padding at the end)
-        np.nan_to_num(mapped, copy=False)
+        cnt[cnt == 0] = 1
+        mapped = cum / cnt
         return mapped
     
     def decode(self, window_scores, padding_length=None):

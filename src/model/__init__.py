@@ -31,6 +31,18 @@ def register_processor(name):
 from .KMeansAD.modeling_KMeansAD import KMeansAD
 from .KMeansAD.processing_KMeansAD import KMeansADProcessor
 from .KMeansAD.configuration_KMeansAD import KMeansADConfig
+from .RQTAD.configuration_RQTAD import RQTADConfig
+from .RQTAD.modeling_RQTAD import RQTAD
+from .RQTAD.processing_RQTAD import RQTADProcessor
 
 
-__all__ = ["KMeansAD", "KMeansADProcessor", "KMeansADConfig", "MODEL_REGISTRY", "CONFIG_REGISTRY"]
+__all__ = [
+           "KMeansAD", 
+           "KMeansADProcessor", 
+           "KMeansADConfig", 
+           "RQTAD", 
+           "RQTADProcessor", 
+           "RQTADConfig", 
+           "MODEL_REGISTRY", 
+           "CONFIG_REGISTRY"
+        ]

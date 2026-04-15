@@ -9,10 +9,11 @@ from ..model.base.processing_base import BaseProcessor
 from ..model.base.output_base import BaseTASDModelOutput
 from ..utils.arguments import DataArguments, ModelArguments, TrainingArguments
 import torch
-from ..evaluation.metrics import get_metrics
+from .metrics import get_metrics, ResultMerger
 from ..dataset import DatasetFeature
 import json
 from typing import Dict, Any
+from scipy.signal import argrelextrema
 
 
 class AnomalyEvaluation:
@@ -22,29 +23,55 @@ class AnomalyEvaluation:
             model_args: ModelArguments,
             train_args: TrainingArguments,
     ):
-        pretrained_model_name_or_path = model_args.pretrained_model_name_or_path
 
-
-        # TODO: support use auto to load from both local and config
-        if Path(pretrained_model_name_or_path).exists():
-            from transformers import AutoModel, AutoProcessor
-            self.model = AutoModel.from_pretrained(pretrained_model_name_or_path)
-            self.processor: BaseProcessor = AutoProcessor.from_pretrained(pretrained_model_name_or_path)
-        else:
-            model_name = pretrained_model_name_or_path
-            config_cls: PreTrainedConfig = CONFIG_REGISTRY[model_name]
-            model_cls: PreTrainedModel = MODEL_REGISTRY[model_name]
-            processor_cls: BaseProcessor = PROCESSOR_REGISTRY[model_name]
-            config = config_cls.from_dict(model_args.config)
-            self.model = model_cls(config)
-            self.processor = processor_cls.from_dict(model_args.processor_config) # type: ignore
-
+        self.result_merger = ResultMerger()
         self.random_seed = train_args.seed
         set_seed(self.random_seed)
 
         self.data_args = data_args
         self.model_args = model_args
         self.train_args = train_args
+
+    def _detect_period(self, data, rank=1)-> int:
+        """
+        calculate the period window of the data by acf
+        """
+        assert data.ndim == 1, "Only support univariate data for period detection"
+        data = data[:min(2000, len(data))]
+
+        base = 3
+        auto_corr = np.correlate(data - np.mean(data), data - np.mean(data), mode='full')[len(data)-1:]
+        auto_corr /= auto_corr[0]
+        auto_corr = auto_corr[base:]
+
+        local_max = argrelextrema(auto_corr, np.greater)[0]
+
+        try:
+            sorted_local_max = np.argsort(auto_corr[local_max])[::-1]    # Ascending order
+            max_local_max = sorted_local_max[0]     # Default
+            if rank == 1: max_local_max = sorted_local_max[0]
+            if rank == 2: 
+                for i in sorted_local_max[1:]: 
+                    if i > sorted_local_max[0]: 
+                        max_local_max = i 
+                        break
+            if rank == 3:
+                for i in sorted_local_max[1:]: 
+                    if i > sorted_local_max[0]: 
+                        id_tmp = i
+                        break
+                for i in sorted_local_max[id_tmp:]:
+                    if i > sorted_local_max[id_tmp]: 
+                        max_local_max = i           
+                        break
+
+            final_period = local_max[max_local_max]+base
+            if final_period>300:
+                return 125
+            return int(final_period)
+        except:
+            return 125
+            
 
     def prepare_data(self, path):
 
@@ -122,12 +149,28 @@ class AnomalyEvaluation:
                 unsupervised and semisupervised eval at both train and test data
         """
         train_data, train_labels, test_data, test_labels = self.prepare_data(data_path)
+        
+        pretrained_model_name_or_path = self.model_args.pretrained_model_name_or_path
+        # TODO: support use auto to load from both local and config
+        if Path(pretrained_model_name_or_path).exists():
+            from transformers import AutoModel, AutoProcessor
+            self.model = AutoModel.from_pretrained(pretrained_model_name_or_path)
+            self.processor: BaseProcessor = AutoProcessor.from_pretrained(pretrained_model_name_or_path)
+        else:
+            model_name = pretrained_model_name_or_path
+            config_cls: PreTrainedConfig = CONFIG_REGISTRY[model_name]
+            model_cls: PreTrainedModel = MODEL_REGISTRY[model_name]
+            processor_cls: BaseProcessor = PROCESSOR_REGISTRY[model_name]
+            config = config_cls.from_dict(self.model_args.config)
+            self.model = model_cls(config)
+            self.processor = processor_cls.from_dict(self.model_args.processor_config) # type: ignore
 
         self.model.fit(train_data, test_data, self.train_args, self.processor)
         all_data = concatenate_datasets([train_data, test_data])
+        period = self._detect_period(np.array(all_data[DatasetFeature.TIMESERIES.value]))
         all_labels = concatenate_datasets([train_labels, test_labels])
         sorce = self._in_loop(all_data)
-        evaluation_result: Dict = get_metrics(sorce, all_labels)
+        evaluation_result: Dict = get_metrics(sorce, np.array(all_labels[DatasetFeature.LABELS.value]), period)
         return evaluation_result
 
     def _in_loop(self, all_data):
@@ -146,24 +189,26 @@ class AnomalyEvaluation:
         # check file and dir
         if self.data_args.data_dir is None and self.data_args.data_file is None:
             raise ValueError("Need either a data_dir or a data_file.")
-        data_path_list = [p for p in sorted(Path(self.data_args.data_dir).iterdir()) if p.is_file()] if self.data_args.data_dir is not None else [Path(self.data_args.data_file)]
-        all_results = []
+        data_path_list = sorted([
+            p for p in Path(self.data_args.data_dir).rglob("*") if p.is_file()
+        ]) if self.data_args.data_dir is not None else [Path(self.data_args.data_file)]
 
-        save_dir = Path(save_dir) if save_dir is not None else Path.cwd()
-        save_file = save_dir / f"evaluation_result_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        save_dir = Path(save_dir) if save_dir is not None else Path(self.train_args.output_dir if self.train_args.output_dir is not None else "./results")
+        save_file = save_dir / f"evaluation_result_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"
         save_dir.mkdir(parents=True, exist_ok=True)
-
+        results_tosave = []
         for idx, data_path in enumerate(data_path_list):
             print(f"{'='*5} Evaluating file {idx+1}/{len(data_path_list)}: {data_path.name} {'='*5}")
             evaluation_result = self.evaluate(data_path)
             evaluation_result['file_name'] = data_path.name
-            print(f"{evaluation_result}")
-            all_results.append(evaluation_result)
+            print(json.dumps(evaluation_result, indent=4, ensure_ascii=False))
+            results_tosave = self.result_merger(evaluation_result)
 
-            stage = 'w' if idx == 0 else 'a'
-            with open(save_file, stage) as f:
-                json.dump(evaluation_result, f, indent=4)
-        return all_results
+            with open(save_file, 'w') as f:
+                json.dump(sum(results_tosave, []) , f, indent=4)
+
+        return sum(results_tosave, [])
+
 
 
     def __call__(self, save_path=None):
