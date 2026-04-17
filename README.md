@@ -2,7 +2,7 @@
 <img width="500" src="assets/TSAD_sample.png"/>
 </p>
 
-<h1 align="center">Com-TAD</h1>
+<h1 align="center">TSAD</h1>
 <h2 align="center"><span style="font-weight: bold;">Not a Toy</span>: Comprehensive Anomaly Detection for Time Series Paradigms, Benchmarks & Evaluator</h2>
 
 <p align="center">
