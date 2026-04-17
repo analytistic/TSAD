@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">TSAD</h1>
-<h2 align="center"><span style="font-weight: bold;">Not a Toy</span>: Comprehensive Anomaly Detection for Time Series Paradigms, Benchmarks & Evaluator</h2>
+<h2 align="center"><span style="font-weight: bold;">Not a Toy</span>: Comprehensive Anomaly Detection for Time Series </h2>
 
 <p align="center">
 <img alt="PyPI" src="https://img.shields.io/pypi/v/ts_ad"> 
