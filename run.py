@@ -3,7 +3,7 @@ import argparse
 if __name__ == "__main__":
     # Example usage
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_path', type=str, default="", help="Path to the configuration file")
+    parser.add_argument('--config_path', type=str, default="config/RQTAD.toml", help="Path to the configuration file")
     args = parser.parse_args()
 
     from src.utils.arguments import DataArguments, ModelArguments, TrainingArguments

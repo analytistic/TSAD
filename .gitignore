@@ -27,6 +27,8 @@ output/
 #DS_Store
 .DS_Store
 
+# results
+assets/TAB.xlsx
 
 
 

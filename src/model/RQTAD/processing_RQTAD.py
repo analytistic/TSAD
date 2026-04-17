@@ -165,6 +165,7 @@ class RQTADProcessor(BaseProcessor):
             batch_size=None,
             load_from_cache_file=False,
             remove_columns=data.column_names,
+            keep_in_memory=True,
         )
         return data
 
