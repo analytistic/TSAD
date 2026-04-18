@@ -1,5 +1,5 @@
 [data_args]
-data_dir = 'data/TSB-AD-U/'
+data_dir = 'data/TSB-AD-U/YAHOO'
 
 [model_args]
 pretrained_model_name_or_path = "RQTAD"
@@ -7,6 +7,7 @@ pretrained_model_name_or_path = "RQTAD"
 
 [model_args.config]
 k_list=[40,20,10]
+codebook_num=3
 window_size=40
 stride=1
 n_jobs=1

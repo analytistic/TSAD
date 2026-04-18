@@ -42,7 +42,7 @@ Our framework is highly modular and designed to seamlessly bridge the gap betwee
    - **Online Streaming Pipeline (Proposed)**: Simulates real-world continuous data arrival. Models undergo incremental state updating, and performance is measured using our customized **Delay-Aware Streaming Metrics** to actively penalize late detections.
 
 <h2 align="center">A  Baseline</h2>
-We propose Residual Multi-Period KMeans (RPKMeans) as a powerful baseline, which achieves SOTA performance on the static TSB-AD-U and outperforms full-shot deep models in the field, as well as zshort and fine-tuned pre-trained models.
+We propose RQTAD as a powerful baseline, which achieves SOTA performance on the static TSB-AD-U and outperforms full-shot deep models in the field, as well as zshort and fine-tuned pre-trained models.
 <p align="center">
-<img width="500" src="assets/RPKMeans.png"/>
+<img width="500" src="assets/RQTAD.png"/>
 </p>

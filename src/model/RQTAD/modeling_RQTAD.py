@@ -10,9 +10,7 @@ from ..base.output_base import BaseTASDModelOutput
 from .configuration_RQTAD import RQTADConfig
 from torch import nn
 import torch
-from transformers.training_args import TrainingArguments
 from .. import register_model
-from ..base.processing_base import BaseProcessor
 from datasets import concatenate_datasets
 from ...dataset import DatasetFeature
 from dataclasses import dataclass, field
@@ -152,6 +150,7 @@ class RQTAD(BaseTASDModel):
         self.config.window_size = window_size
         self.model = RQKMeans(self.config)
         all_data = processor.prepare_dataset(all_data)
+   
         timeslide = processor(timeslide=all_data[DatasetFeature.TIMESLIDE.value])[DatasetFeature.TIMESLIDE.value]
         self.model.fit(timeslide)
         self.save_pretrained(train_args.output_dir)
