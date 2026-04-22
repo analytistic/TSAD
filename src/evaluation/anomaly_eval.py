@@ -148,7 +148,6 @@ class AnomalyEvaluation:
             eval:
                 unsupervised and semisupervised eval at both train and test data
         """
-        set_seed(self.random_seed)
         train_data, train_labels, test_data, test_labels = self.prepare_data(data_path)
         
         pretrained_model_name_or_path = self.model_args.pretrained_model_name_or_path
@@ -182,17 +181,17 @@ class AnomalyEvaluation:
             results = []
             for _, inputs in enumerate(all_data):
                 outputs: BaseTASDModelOutput = self.model(**self.processor(**inputs))
-                results.append(outputs.score.cpu().numpy())
+                results.append(outputs.sorce.cpu().numpy())
         sorce = self.processor.decode(np.array(results))
         return sorce
 
     def evaluate_loop(self, save_dir):
         # check file and dir
-        if self.data_args.data_dir is None and self.data_args.data_path is None:
+        if self.data_args.data_dir is None and self.data_args.data_file is None:
             raise ValueError("Need either a data_dir or a data_file.")
         data_path_list = sorted([
             p for p in Path(self.data_args.data_dir).rglob("*") if p.is_file()
-        ]) if self.data_args.data_dir is not None else [Path(self.data_args.data_path)]
+        ]) if self.data_args.data_dir is not None else [Path(self.data_args.data_file)]
 
         save_dir = Path(save_dir) if save_dir is not None else Path(self.train_args.output_dir if self.train_args.output_dir is not None else "./results")
         save_file = save_dir / f"evaluation_result_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"

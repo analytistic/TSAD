@@ -5,7 +5,7 @@ from .. import register_config
 class RQTADConfig(PreTrainedConfig):
     def __init__(self, 
                  k_list=[40, 20, 10], 
-                 window_size=[10, 5, 2], 
+                 window_size=10, 
                  stride=1, 
                  n_jobs=1, 
                  normalize=True, 

@@ -58,27 +58,20 @@ class RQTADProcessor(BaseProcessor):
                  labels: np.ndarray | None = None,
                  scale: Optional[bool] = None, 
                  return_tensors: str = 'pt', 
-                 **kwargs) -> BatchFeature:    
+                 **kwargs) -> BatchFeature:
+        """
+        if timeslide is provided, use timeslide directly and ignore timeseries and timestamp. Otherwise, compute timeslide from timeseries and timestamp.
+        """
+        if timeseries is None and timeslide is None:
+            raise ValueError("At least one of timeseries or timeslide must be provided.")
         
-        if timeslide is not None:
-            assert timestamp is not None, "Timestamp must be provided when timeslide is given."
-            timestamp = np.array(timestamp)
-            timeslide = np.array(timeslide)
-        elif timeseries is not None:
-            timestamp = np.array(timestamp) if timestamp is not None else np.arange(len(timeseries))
-            timeseries = np.array(timeseries)
-            timeslide, timestamp = self._slide_window(timeseries, timestamp)
-        else:
-            raise ValueError("Either timeslide or timeseries must be provided.")
-
+        timeslide = np.array(timeslide) if timeslide is not None else self._slide_window(np.array(timeseries))
         if timeslide.shape[0] == self.window_size:
             timeslide = timeslide[None, ...]
-            timestamp = timestamp[None, ...]
         timeslide = self.transform(timeslide)
 
         outputs = {}
         outputs[DatasetFeature.TIMESLIDE.value] = timeslide
-        outputs[DatasetFeature.TIMESTAMP.value] = timestamp
 
         return BatchFeature(
             data=outputs,
@@ -144,14 +137,13 @@ class RQTADProcessor(BaseProcessor):
         point_scores = self.get_point_scores(window_scores, self.window_size, self.stride, padding_length)
         return point_scores
     
-    def _slide_window(self, series: np.ndarray, timestamp: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def _slide_window(self, series: np.ndarray):
 
         flat_shape = (series.shape[0] - (self.window_size - 1), -1)  # in case we have a multivariate TS
         slides = sliding_window_view(series, window_shape=self.window_size, axis=0).reshape(flat_shape)[::self.stride, :]
-        timestamp = sliding_window_view(timestamp, window_shape=self.window_size, axis=0).reshape(flat_shape)[::self.stride, :]
         self.padding_length = series.shape[0] - (slides.shape[0] * self.stride + self.window_size - self.stride)
 
-        return slides, timestamp
+        return slides
 
     
     def prepare_dataset(self, data: Dataset, **kwargs) -> Dataset:
@@ -159,7 +151,8 @@ class RQTADProcessor(BaseProcessor):
         def slide_window_for_batch(batch):
             timeseries = np.array(batch[DatasetFeature.TIMESERIES.value])[:, None]
             timestamp = np.array(batch[DatasetFeature.TIMESTAMP.value])[:, None]
-            timeslides, timestamp = self._slide_window(timeseries, timestamp)
+            timeslides = self._slide_window(timeseries)
+            timestamp = self._slide_window(timestamp)
             return {
                 DatasetFeature.TIMESTAMP.value: timestamp.tolist(),
                 DatasetFeature.TIMESLIDE.value: timeslides.tolist(),

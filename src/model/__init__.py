@@ -34,9 +34,7 @@ from .KMeansAD.configuration_KMeansAD import KMeansADConfig
 from .RQTAD.configuration_RQTAD import RQTADConfig
 from .RQTAD.modeling_RQTAD import RQTAD
 from .RQTAD.processing_RQTAD import RQTADProcessor
-from .AlignMAD.configuration_AlignMAD import AlignMADConfig
-from .AlignMAD.modeling_AlignMAD import AlignMAD
-from .AlignMAD.processing_AlignMAD import AlignMADProcessor
+
 
 __all__ = [
            "KMeansAD", 
@@ -45,9 +43,6 @@ __all__ = [
            "RQTAD", 
            "RQTADProcessor", 
            "RQTADConfig", 
-           "AlignMAD",
-           "AlignMADProcessor",
-           "AlignMADConfig",
            "MODEL_REGISTRY", 
            "CONFIG_REGISTRY"
         ]
