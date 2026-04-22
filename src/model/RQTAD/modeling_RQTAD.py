@@ -254,12 +254,9 @@ class RQKMeans(nn.Module):
             score = torch.abs(residual - residual.median(dim=-1, keepdim=True)[0]).max()
             score_list.append(score)
 
-        # normalize final score by per-cluster residual scale
+        # normalize final score by per-cluster expected max deviation
         last_idx = idx_list[-1]
-        sigma_inv = self.residual_sigma_inv[last_idx]
-        if residual.dim() == 2:
-            sigma_inv = sigma_inv.unsqueeze(0)
-        score_list[-1] = score_list[-1] * sigma_inv.max()
+        score_list[-1] = score_list[-1] * self.residual_sigma_inv[last_idx]
 
         if return_dist:
             return idx_list, torch.stack(dists_list, dim=1), torch.tensor(score_list)
@@ -297,16 +294,16 @@ class RQKMeans(nn.Module):
             idx = torch.argmin(distance, dim=-1)
             res = res - codebook(idx)
 
-        # compute per-cluster residual sigma for score normalization
+        # compute per-cluster expected max deviation for score normalization
         k_last = self.k_list[-1]
         last_idx = idx
-        res_norm_sq = (res ** 2).sum(dim=-1)  # (n_windows,)
-        cluster_res_sum = torch.zeros(k_last, device=res.device, dtype=res.dtype)
-        cluster_res_sum.scatter_add_(0, last_idx, res_norm_sq)
+        # per-window max deviation from median (same metric as the score)
+        per_window_score = (res - res.median(dim=-1, keepdim=True)[0]).abs().max(dim=-1).values  # (n_windows,)
+        cluster_score_sum = torch.zeros(k_last, device=res.device, dtype=res.dtype)
+        cluster_score_sum.scatter_add_(0, last_idx, per_window_score)
         counts = torch.bincount(last_idx, minlength=k_last).clamp(min=1).to(res.dtype)
-        residual_sigma = (cluster_res_sum / counts).sqrt()
-        residual_sigma_inv = 1.0 / residual_sigma.clamp(min=1e-8)
-        self.residual_sigma_inv.copy_(residual_sigma_inv)
+        expected_score = cluster_score_sum / counts
+        self.residual_sigma_inv.copy_(1.0 / expected_score.clamp(min=1e-8))
         return self
     
 
