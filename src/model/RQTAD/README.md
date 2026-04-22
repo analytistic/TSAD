@@ -358,7 +358,63 @@ Adds phase-alignment before quantization via cyclic rotation: $\mathbf{w}_s \to 
 
 ---
 
-## 9. References
+## 9. Non-Stationarity: Why the Codebook Already Handles It
+
+### 9.1 Key Insight
+
+Non-stationarity (mean shifts, variance changes, regime switches) does **not** require explicit segmentation or local codebook fitting. The KMeans codebook naturally absorbs non-stationary patterns into different Voronoi cells:
+
+- **Regime A** (low mean) → windows cluster near codeword $\mathbf{c}_a$
+- **Regime B** (high mean) → windows cluster near codeword $\mathbf{c}_b$
+- **Regime C** (high variance) → windows spread across multiple codewords
+
+The codebook acts as a **regime dictionary**: it doesn't care *when* a pattern appears, only *what* it looks like. Time-invariance of the Voronoi partition means non-stationarity is automatically handled by increasing the number of occupied clusters.
+
+### 9.2 Where Non-Stationarity Still Hurts: The Anomaly Score
+
+The codebook handles clustering, but the **anomaly score** has a hidden assumption: the residual distribution is the same for all codeword assignments.
+
+Under non-stationarity, different regimes produce different residual distributions:
+
+$$\mathbf{r} \mid z^* = k \;\sim\; \mathcal{N}(\mathbf{0},\; \boldsymbol{\Sigma}_k)$$
+
+where $\boldsymbol{\Sigma}_k$ depends on the regime (codeword). The current score:
+
+$$A(\mathbf{w}) = \max_j |r_j - \text{median}(\mathbf{r})|$$
+
+ignores this. A "normal" residual in a high-variance regime may score higher than an "anomalous" residual in a low-variance regime, leading to:
+- **False positives** in high-variance regimes
+- **False negatives** in low-variance regimes
+
+### 9.3 ~~Candidate Fix: Per-Cluster Score Normalization~~ [ABANDONED]
+
+The natural fix is to normalize the score by the cluster-specific expected score:
+
+$$A_{\text{norm}}(\mathbf{w}) = \frac{\max_j |r_j - \text{median}(\mathbf{r})|}{\mathbb{E}[\max_j |r_j - \text{median}(\mathbf{r})| \mid z^* = k]}$$
+
+where the denominator is estimated from training data per codeword.
+
+**Result:** Failed on 2026-04-22. Two variants tested:
+1. Per-cluster $\sigma_k = \sqrt{\mathbb{E}[\|\mathbf{r}\|^2]}$ (L2 norm) → ~1 point drop
+2. Per-cluster mean max-deviation (matching metric) → ~1 point drop
+
+**Why it failed:** The score metric (max-median) and the normalization factor, even when matched, may not be the right decomposition. The per-cluster estimation may also be unstable for small clusters. This direction is abandoned for now.
+
+### 9.4 Remaining TODO: Non-Stationarity Improvements
+
+| # | Idea | GP Rationale | Status |
+|---|------|-------------|--------|
+| 1 | **Weighted KMeans** (time decay $\alpha_i = e^{-\Delta t / \tau}$) | Equivalent to exponential forgetting in non-stationary GP; recent patterns get higher weight in codeword placement | Not tried |
+| 2 | **Adaptive period detection** (sliding ACF instead of global ACF) | Kernel period $p(t)$ is time-varying; global ACF averages over all regimes, local ACF captures regime-specific periodicity | Not tried |
+| 3 | **Hierarchical cascade by non-stationarity type** | Level 0 handles mean shift (detrend), Level 1 handles period change, Level 2 handles variance change; each level's GP component has different stationarity properties | Not tried |
+| 4 | **Phase alignment (AlignMAD integration)** | Toeplitz → circulant covariance; periodic kernel contribution collapses to low rank; already implemented as a variant, not yet integrated into RQTAD | Exists as separate model |
+| 5 | **Anomaly score redesign** | Current max-median metric is hard to normalize; consider L2 norm $\|\mathbf{r}\|_2$ or Mahalanobis distance, which have cleaner GP distributional properties ($\chi^2$) | Not tried |
+
+**Recommended next step:** Start with **#5 (score redesign)** — changing the score metric to have better statistical properties under the GP model, then revisit normalization. Alternatively, **#1 (Weighted KMeans)** is low-risk and independent of score design.
+
+---
+
+## 10. References
 
 - [TSB-AD-U Benchmark](https://github.com/decisionintelligence/TSB-AD)
 - Paparrizos et al., "Volume Under the Surface: A Three-Dimensional Accuracy Metric for Time-Series Anomaly Detection" (VLDB 2022)
