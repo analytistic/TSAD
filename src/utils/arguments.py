@@ -14,8 +14,8 @@ class DataArguments:
             "help": "data path"
         },
     )
-    data_dir: str = field(
-        default="",
+    data_dir: str | None = field(
+        default=None,
         metadata={
             "help": "data dir"
         },

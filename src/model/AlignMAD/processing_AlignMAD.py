@@ -9,8 +9,8 @@ from ..base.processing_base import BaseProcessor
 from datasets import Dataset
 from ...dataset import DatasetFeature
 
-@register_processor("RQTAD")
-class RQTADProcessor(BaseProcessor):
+@register_processor("AlignMAD")
+class AlignMADProcessor(BaseProcessor):
     def __init__(self,
                  window_size: int=24,
                  stride: int=1,
