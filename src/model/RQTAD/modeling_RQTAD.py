@@ -46,20 +46,27 @@ class RQKMeans(nn.Module):
             nn.init.uniform_(codebook.weight, a=-1.0, b=1.0)
             codebook.weight.requires_grad = False
 
+        k_last = self.k_list[-1]
+        self.register_buffer('residual_sigma_inv', torch.ones(k_last))
+
 
     def forward(self, X, return_dist=False):
         idx_list, dists_list = [], []
         residual = X.to(self.codebook_list[0].weight.device, dtype=self.codebook_list[0].weight.dtype)
         for codebook in self.codebook_list:
             assert isinstance(codebook, nn.Embedding)
-            distance = torch.cdist(residual, codebook.weight)          
-            idx = torch.argmin(distance, dim=-1)                      
+            distance = torch.cdist(residual, codebook.weight)
+            idx = torch.argmin(distance, dim=-1)
             min_dists = distance.gather(-1, idx.unsqueeze(-1)).squeeze(-1) # (batch_size,)
             idx_list.append(idx)
             dists_list.append(min_dists)
-            residual = residual - codebook(idx)  
+            residual = residual - codebook(idx)
             score = torch.abs(residual - residual.median(dim=-1, keepdim=True)[0]).max()
             score_list.append(score)
+
+        # normalize final score by per-cluster expected max deviation
+        last_idx = idx_list[-1]
+        score_list[-1] = score_list[-1] * self.residual_sigma_inv[last_idx]
 
         if return_dist:
             return idx_list, torch.stack(dists_list, dim=1)  
@@ -87,6 +94,17 @@ class RQKMeans(nn.Module):
                 if shift < self.tol:
                     break
             res = res - codebook(idx)
+
+        # compute per-cluster expected max deviation for score normalization
+        k_last = self.k_list[-1]
+        last_idx = idx
+        # per-window max deviation from median (same metric as the score)
+        per_window_score = (res - res.median(dim=-1, keepdim=True)[0]).abs().max(dim=-1).values  # (n_windows,)
+        cluster_score_sum = torch.zeros(k_last, device=res.device, dtype=res.dtype)
+        cluster_score_sum.scatter_add_(0, last_idx, per_window_score)
+        counts = torch.bincount(last_idx, minlength=k_last).clamp(min=1).to(res.dtype)
+        expected_score = cluster_score_sum / counts
+        self.residual_sigma_inv.copy_(1.0 / expected_score.clamp(min=1e-8))
         return self
     
 
@@ -146,6 +164,7 @@ class RQTAD(BaseTASDModel):
 
     def fit(self, train_data, test_data, train_args, processor, **kwargs):
         all_data = concatenate_datasets([train_data, test_data])
+        all_data = train_data
         window_size = self._detect_period(np.array(all_data[DatasetFeature.TIMESERIES.value]), rank=3)
         # window_size = self.config.window_size
 
