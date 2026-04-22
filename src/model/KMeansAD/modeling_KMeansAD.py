@@ -95,7 +95,7 @@ class KMeansAD(BaseTASDModel):
         timeslide = timeslide.to(self.model.codebook.weight.device, dtype=self.model.codebook.weight.dtype)
         idx, dists = self.model(timeslide, return_dist=True)
         return KMeansADModelOutput(
-            sorce=dists,
+            score=dists,
             idx=idx
         )
 

@@ -7,5 +7,5 @@ class BaseTASDModelOutput(ModelOutput):
     """
     Base class for model outputs in time series anomaly detection.
     """
-    sorce: torch.Tensor
+    score: torch.Tensor
     

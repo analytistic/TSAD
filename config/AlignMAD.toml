@@ -1,15 +1,14 @@
 [data_args]
-data_dir = 'data/TSB-AD-U/YAHOO'
-# data_path = 'data/TSB-AD-U/YAHOO/657_YAHOO_id_107_WebService_tr_500_1st_1260.csv'
+data_dir = 'data/TSB-AD-U/UCR'
 
 [model_args]
-pretrained_model_name_or_path = "RQTAD"
+pretrained_model_name_or_path = "AlignMAD"
 
 
 [model_args.config]
-k_list=[40, 20, 10]
-codebook_num=3
-window_size=[40, 40, 40]
+k_list=[1]
+codebook_num=1
+window_size=40
 stride=1
 n_jobs=1
 normalize=true
@@ -24,7 +23,7 @@ stride=1
 [training_args]
 seed = 42
 fp32 = true
-output_dir = "outputs/model_output/RQTAD/"
+output_dir = "outputs/model_output/AlignMAD/"
 num_train_epochs = 50
 optim = "adamw_torch"
 learning_rate = 1e-4
@@ -34,7 +33,7 @@ report_to = "tensorboard"
 log_level = "info"
 log_level_replica = "warning"
 logging_strategy = "steps"
-logging_dir = "outputs/tensorboard/RQTAD/"
+logging_dir = "outputs/tensorboard/AlignMAD/"
 logging_steps = 10
 logging_first_step = true
 save_strategy = "epoch"
