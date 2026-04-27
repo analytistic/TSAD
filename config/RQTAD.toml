@@ -1,6 +1,10 @@
 [data_args]
-data_dir = 'data/TSB-AD-U/YAHOO'
+data_dir = 'data/TSB-AD-U/EVAl'
 # data_path = 'data/TSB-AD-U/YAHOO/657_YAHOO_id_107_WebService_tr_500_1st_1260.csv'
+
+
+
+
 
 [model_args]
 pretrained_model_name_or_path = "RQTAD"

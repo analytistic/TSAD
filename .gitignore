@@ -30,5 +30,8 @@ output/
 # results
 assets/TAB.xlsx
 
+# pdf
+*.pdf
+
 
 

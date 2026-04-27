@@ -140,6 +140,13 @@ class RQTADProcessor(BaseProcessor):
         return mapped
     
     def decode(self, window_scores, padding_length=None):
+        window_scores = np.asarray(window_scores)
+        if window_scores.ndim == 1:
+            window_scores = window_scores.reshape(-1, 1)
+        # z-score normalize each level across windows, then max per window
+        mean = window_scores.mean(axis=0, keepdims=True)
+        std = window_scores.std(axis=0, keepdims=True)
+        window_scores = ((window_scores - mean) / (std + 1e-8)).max(axis=1)
         padding_length = padding_length if padding_length is not None else self.padding_length
         point_scores = self.get_point_scores(window_scores, self.window_size, self.stride, padding_length)
         return point_scores

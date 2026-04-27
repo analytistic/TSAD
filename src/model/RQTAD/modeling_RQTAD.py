@@ -345,34 +345,44 @@ class RQTAD(BaseTASDModel):
             return [125]
 
     def partial_fit(self):
-        return 
+        return
+
+    @staticmethod
+    def _window_zscore(x):
+        """Per-window z-score normalization. Each row is normalized independently."""
+        mean = x.mean(dim=-1, keepdim=True)
+        std = x.std(dim=-1, keepdim=True)
+        return (x - mean) / (std + 1e-8)
 
     def fit(self, train_data, test_data, train_args, processor, **kwargs):
-        all_data = concatenate_datasets([train_data, test_data])
+        # all_data = concatenate_datasets([train_data, test_data])
+        all_data = train_data
         window_size = self._detect_period(np.array(all_data[DatasetFeature.TIMESERIES.value]), rank=3)
         # window_size = self.config.window_size
-       
+
 
         processor.window_size = window_size[0]
         self.config.window_size = window_size
         self.model = RQKMeans(self.config)
         all_data = processor.prepare_dataset(all_data)
-   
+
         inputs = processor(
             timeslide=all_data[DatasetFeature.TIMESLIDE.value],
             timestamp=all_data[DatasetFeature.TIMESTAMP.value]
         )
         timeslide = inputs.data[DatasetFeature.TIMESLIDE.value]
+        # timeslide = self._window_zscore(timeslide)
         self.model.fit(timeslide)
         self.save_pretrained(train_args.output_dir)
         processor.save_pretrained(train_args.output_dir)
         return self
-    
-    
+
+
     def forward(self, timeslide, timestamp, **kwargs):
+        # timeslide = self._window_zscore(timeslide)
         idx, dists, score = self.model(timeslide, return_dist=True)
         return RQTADModelOutput(
-            score=score[-1],
+            score=score,
             idx=idx
         )
 
