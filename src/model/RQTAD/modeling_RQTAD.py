@@ -242,14 +242,13 @@ class RQKMeans(nn.Module):
         residual = X.to(self.codebook_list[0].weight.device, dtype=self.codebook_list[0].weight.dtype)
         for codebook in self.codebook_list:
             assert isinstance(codebook, nn.Embedding)
-            distance = torch.cdist(residual, codebook.weight)          
-            idx = torch.argmin(distance, dim=-1)                      
-            min_dists = distance.gather(-1, idx.unsqueeze(-1)).squeeze(-1) # (batch_size,)
+            distance = torch.cdist(residual, codebook.weight)
+            idx = torch.argmin(distance, dim=-1)
+            min_dists = distance.gather(-1, idx.unsqueeze(-1)).squeeze(-1)
             idx_list.append(idx)
             dists_list.append(min_dists)
-            residual = residual - codebook(idx)  
-            score = torch.abs(residual - residual.median(dim=-1, keepdim=True)[0]).max()
-            score_list.append(score)
+            residual = residual - codebook(idx)
+            score_list.append(min_dists)
 
         if return_dist:
             return idx_list, torch.stack(dists_list, dim=1), torch.tensor(score_list)
@@ -355,8 +354,8 @@ class RQTAD(BaseTASDModel):
         return (x - mean) / (std + 1e-8)
 
     def fit(self, train_data, test_data, train_args, processor, **kwargs):
-        # all_data = concatenate_datasets([train_data, test_data])
-        all_data = train_data
+        all_data = concatenate_datasets([train_data, test_data])
+        # all_data = train_data
         window_size = self._detect_period(np.array(all_data[DatasetFeature.TIMESERIES.value]), rank=3)
         # window_size = self.config.window_size
 
@@ -381,6 +380,8 @@ class RQTAD(BaseTASDModel):
     def forward(self, timeslide, timestamp, **kwargs):
         # timeslide = self._window_zscore(timeslide)
         idx, dists, score = self.model(timeslide, return_dist=True)
+        if score.dim() == 2 and score.shape[0] == 1:
+            score = score.squeeze(0)
         return RQTADModelOutput(
             score=score,
             idx=idx

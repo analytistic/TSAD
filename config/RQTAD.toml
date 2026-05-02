@@ -1,5 +1,5 @@
 [data_args]
-data_dir = 'data/TSB-AD-U/EVAl'
+data_dir = 'data/TSB-AD-U/OPPORTUNITY'
 # data_path = 'data/TSB-AD-U/YAHOO/657_YAHOO_id_107_WebService_tr_500_1st_1260.csv'
 
 
@@ -11,7 +11,7 @@ pretrained_model_name_or_path = "RQTAD"
 
 
 [model_args.config]
-k_list=[40, 20, 10]
+k_list=[5, 10, 20]
 codebook_num=3
 window_size=[40, 40, 40]
 stride=1
