@@ -6,7 +6,8 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results
+import plotly.graph_objects as go
+from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results, create_3d_centroid_plot
 
 
 def test_load_yahoo_data():
@@ -62,3 +63,28 @@ def test_extract_clustering_results():
     assert len(results['centroids']) == 35  # 5 + 10 + 20 centroids
     assert len(results['cluster_assignments']) > 0
     assert len(results['cluster_representatives']) == 35
+
+
+def test_create_3d_centroid_plot():
+    """Test creation of 3D centroid plot."""
+    # Create sample centroids
+    centroids = [
+        {
+            'centroid_id': 'L0_C0',
+            'level': 0,
+            'centroid_idx': 0,
+            'time': [0, 1, 2],
+            'values': [1.0, 2.0, 3.0]
+        },
+        {
+            'centroid_id': 'L0_C1',
+            'level': 0,
+            'centroid_idx': 1,
+            'time': [0, 1, 2],
+            'values': [4.0, 5.0, 6.0]
+        }
+    ]
+
+    fig = create_3d_centroid_plot(centroids)
+    assert isinstance(fig, go.Figure)
+    assert len(fig.data) == 2  # Two traces

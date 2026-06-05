@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import plotly.graph_objects as go
 
 
 def load_yahoo_data(file_path: Path) -> tuple[np.ndarray, np.ndarray]:
@@ -118,3 +119,42 @@ def extract_clustering_results(clustering_results: dict, window_size: int) -> di
             })
 
     return results
+
+
+def create_3d_centroid_plot(centroids: list) -> go.Figure:
+    """Create 3D scatter plot of centroids."""
+    fig = go.Figure()
+
+    # Group by level
+    levels = set(c['level'] for c in centroids)
+    colors = ['blue', 'red', 'green', 'orange', 'purple']
+
+    for level in sorted(levels):
+        level_centroids = [c for c in centroids if c['level'] == level]
+
+        # Create traces for each centroid
+        for centroid in level_centroids:
+            fig.add_trace(go.Scatter3d(
+                x=[centroid['centroid_id']] * len(centroid['time']),
+                y=centroid['time'],
+                z=centroid['values'],
+                mode='lines+markers',
+                name=f"Level {level}, Centroid {centroid['centroid_idx']}",
+                line=dict(color=colors[level], width=2),
+                marker=dict(size=3),
+                legendgroup=f"Level {level}"
+            ))
+
+    fig.update_layout(
+        title="RQTAD Centroids in 3D Space",
+        scene=dict(
+            xaxis_title="Centroid ID",
+            yaxis_title="Time",
+            zaxis_title="Value"
+        ),
+        legend=dict(
+            groupclick="toggleitem"
+        )
+    )
+
+    return fig
