@@ -174,3 +174,21 @@ def test_main_function():
     finally:
         test_path.unlink()
         output_path.unlink()
+
+
+def test_full_integration():
+    """Full integration test with real Yahoo data."""
+    # Use a real Yahoo dataset
+    data_path = Path('data/TSB-AD-U/YAHOO/551_YAHOO_id_1_Synthetic_tr_500_1st_893.csv')
+    if not data_path.exists():
+        pytest.skip("Yahoo dataset not found")
+
+    output_path = Path('integration_test_output.html')
+    try:
+        result_path = main(data_path, output_path)
+        assert result_path == output_path
+        assert output_path.exists()
+        assert output_path.stat().st_size > 1000  # Should be a substantial HTML file
+    finally:
+        if output_path.exists():
+            output_path.unlink()
