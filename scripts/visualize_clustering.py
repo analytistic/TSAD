@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 def load_yahoo_data(file_path: Path) -> tuple[np.ndarray, np.ndarray]:
@@ -199,6 +200,39 @@ def create_3d_centroid_plot(centroids: list) -> go.Figure:
         legend=dict(
             groupclick="toggleitem"
         )
+    )
+
+    return fig
+
+
+def create_cluster_fragments_plot(cluster_representatives: list) -> go.Figure:
+    """Create cluster representative fragments plot."""
+    levels = sorted(set(r['level'] for r in cluster_representatives))
+
+    fig = make_subplots(
+        rows=len(levels),
+        cols=1,
+        subplot_titles=[f"Level {level}" for level in levels]
+    )
+
+    for row, level in enumerate(levels, 1):
+        level_reps = [r for r in cluster_representatives if r['level'] == level]
+
+        for rep in level_reps:
+            fig.add_trace(
+                go.Scatter(
+                    x=list(range(len(rep['centroid']))),
+                    y=rep['centroid'],
+                    mode='lines',
+                    name=f"Cluster {rep['cluster_id']} (n={rep['window_count']})",
+                    legendgroup=f"Level {level}"
+                ),
+                row=row, col=1
+            )
+
+    fig.update_layout(
+        title="Cluster Representative Fragments",
+        height=300 * len(levels)
     )
 
     return fig

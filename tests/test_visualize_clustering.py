@@ -7,7 +7,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import plotly.graph_objects as go
-from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results, create_3d_centroid_plot, create_clustered_timeseries_plot
+from plotly.subplots import make_subplots
+from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results, create_3d_centroid_plot, create_clustered_timeseries_plot, create_cluster_fragments_plot
 
 
 def test_load_yahoo_data():
@@ -102,3 +103,28 @@ def test_create_clustered_timeseries_plot():
     fig = create_clustered_timeseries_plot(timeseries, cluster_assignments, window_size=10)
     assert isinstance(fig, go.Figure)
     assert len(fig.data) >= 1  # At least the original time series
+
+
+def test_create_cluster_fragments_plot():
+    """Test creation of cluster fragments plot."""
+    # Create sample cluster representatives
+    cluster_representatives = [
+        {
+            'level': 0,
+            'cluster_id': 0,
+            'centroid': [1.0, 2.0, 3.0],
+            'sample_indices': [0, 1, 2],
+            'window_count': 10
+        },
+        {
+            'level': 0,
+            'cluster_id': 1,
+            'centroid': [4.0, 5.0, 6.0],
+            'sample_indices': [3, 4, 5],
+            'window_count': 15
+        }
+    ]
+
+    fig = create_cluster_fragments_plot(cluster_representatives)
+    assert isinstance(fig, go.Figure)
+    assert len(fig.data) == 2  # Two traces
