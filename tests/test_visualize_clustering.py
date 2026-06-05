@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.visualize_clustering import load_yahoo_data
+from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering
 
 
 def test_load_yahoo_data():
@@ -27,3 +27,18 @@ def test_load_yahoo_data():
         assert np.array_equal(labels, [0, 0, 1, 0, 0])
     finally:
         test_path.unlink()
+
+
+def test_run_rqtad_clustering():
+    """Test RQTAD clustering execution."""
+    # Create synthetic time series
+    np.random.seed(42)
+    timeseries = np.sin(np.linspace(0, 10 * np.pi, 500)) + np.random.normal(0, 0.1, 500)
+
+    result = run_rqtad_clustering(timeseries)
+
+    assert 'idx_list' in result
+    assert 'codebook_list' in result
+    assert 'config' in result
+    assert len(result['idx_list']) == 3  # 3 levels
+    assert len(result['codebook_list']) == 3

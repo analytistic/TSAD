@@ -122,7 +122,7 @@ class PyramidRQKMeans(nn.Module):
             score_list.append(score)
 
         if return_dist:
-            return idx_list, torch.stack(dists_list, dim=1), torch.tensor(score_list)
+            return idx_list, torch.stack(dists_list, dim=1), torch.stack(score_list)
         else:
             return idx_list, None
         
@@ -251,7 +251,7 @@ class RQKMeans(nn.Module):
             score_list.append(min_dists)
 
         if return_dist:
-            return idx_list, torch.stack(dists_list, dim=1), torch.tensor(score_list)
+            return idx_list, torch.stack(dists_list, dim=1), torch.stack(score_list)
         else:
             return idx_list, None
         
