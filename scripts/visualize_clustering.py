@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -308,3 +309,24 @@ def generate_html_report(timeseries: np.ndarray, clustering_results: dict, outpu
         f.write(html_content)
 
     return output_path
+
+
+def main(data_path: Path, output_path: Path) -> Path:
+    """Main function to generate clustering visualization."""
+    # Load data
+    timeseries, labels = load_yahoo_data(data_path)
+
+    # Run clustering
+    clustering_results = run_rqtad_clustering(timeseries)
+
+    # Generate report
+    return generate_html_report(timeseries, clustering_results, output_path)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='RQTAD Clustering Visualization')
+    parser.add_argument('--data_path', type=Path, required=True, help='Path to Yahoo CSV file')
+    parser.add_argument('--output_path', type=Path, required=True, help='Path to output HTML file')
+
+    args = parser.parse_args()
+    main(args.data_path, args.output_path)

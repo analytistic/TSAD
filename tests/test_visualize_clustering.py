@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results, create_3d_centroid_plot, create_clustered_timeseries_plot, create_cluster_fragments_plot, generate_html_report
+from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results, create_3d_centroid_plot, create_clustered_timeseries_plot, create_cluster_fragments_plot, generate_html_report, main
 
 
 def test_load_yahoo_data():
@@ -153,4 +153,24 @@ def test_generate_html_report():
         assert output_path.exists()
         assert output_path.stat().st_size > 0
     finally:
+        output_path.unlink()
+
+
+def test_main_function():
+    """Test main function with sample data."""
+    # Create a temporary CSV file for testing
+    test_data = pd.DataFrame({
+        'Data': np.sin(np.linspace(0, 10 * np.pi, 500)).tolist(),
+        'Label': [0] * 500
+    })
+    test_path = Path('test_yahoo_main.csv')
+    test_data.to_csv(test_path, index=False)
+
+    output_path = Path('test_main_output.html')
+    try:
+        result_path = main(test_path, output_path)
+        assert result_path == output_path
+        assert output_path.exists()
+    finally:
+        test_path.unlink()
         output_path.unlink()
