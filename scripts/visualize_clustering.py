@@ -67,3 +67,54 @@ def run_rqtad_clustering(timeseries: np.ndarray) -> dict:
         "codebook_list": model.model.codebook_list,
         "config": config,
     }
+
+
+def extract_clustering_results(clustering_results: dict, window_size: int) -> dict:
+    """Extract detailed clustering results for visualization."""
+    idx_list = clustering_results['idx_list']
+    codebook_list = clustering_results['codebook_list']
+
+    results = {
+        'centroids': [],
+        'cluster_assignments': [],
+        'cluster_representatives': []
+    }
+
+    for level, (idx, codebook) in enumerate(zip(idx_list, codebook_list)):
+        # Extract centroids
+        for centroid_idx in range(codebook.num_embeddings):
+            centroid_values = codebook.weight[centroid_idx].numpy()
+            results['centroids'].append({
+                'centroid_id': f"L{level}_C{centroid_idx}",
+                'level': level,
+                'centroid_idx': centroid_idx,
+                'time': list(range(len(centroid_values))),
+                'values': centroid_values.tolist()
+            })
+
+        # Extract cluster assignments
+        for window_idx, cluster_id in enumerate(idx.numpy()):
+            results['cluster_assignments'].append({
+                'window_idx': window_idx,
+                'start_time': window_idx,
+                'end_time': window_idx + window_size,
+                'cluster_id': int(cluster_id),
+                'level': level
+            })
+
+        # Extract cluster representatives
+        for cluster_id in range(codebook.num_embeddings):
+            centroid_values = codebook.weight[cluster_id].numpy()
+            # Find sample windows in this cluster
+            sample_mask = idx.numpy() == cluster_id
+            sample_indices = np.where(sample_mask)[0][:5]  # Up to 5 samples
+
+            results['cluster_representatives'].append({
+                'level': level,
+                'cluster_id': cluster_id,
+                'centroid': centroid_values.tolist(),
+                'sample_indices': sample_indices.tolist(),
+                'window_count': int(sample_mask.sum())
+            })
+
+    return results
