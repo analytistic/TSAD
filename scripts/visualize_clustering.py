@@ -1,3 +1,16 @@
+"""
+RQTAD Clustering Visualization Tool
+
+This script analyzes RQTAD's multi-layer residual quantization results
+on Yahoo time series data and generates an HTML report with interactive
+3D visualizations.
+
+Usage:
+    python scripts/visualize_clustering.py \
+        --data_path data/TSB-AD-U/YAHOO/551_YAHOO_id_1_Synthetic_tr_500_1st_893.csv \
+        --output_path outputs/clustering_analysis.html
+"""
+
 import argparse
 import pandas as pd
 import numpy as np
