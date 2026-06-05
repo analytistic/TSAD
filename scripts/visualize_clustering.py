@@ -121,6 +121,50 @@ def extract_clustering_results(clustering_results: dict, window_size: int) -> di
     return results
 
 
+def create_clustered_timeseries_plot(timeseries: np.ndarray, cluster_assignments: list, window_size: int) -> go.Figure:
+    """Create time series plot with cluster coloring."""
+    fig = go.Figure()
+
+    # Plot original time series
+    fig.add_trace(go.Scatter(
+        x=list(range(len(timeseries))),
+        y=timeseries,
+        mode='lines',
+        name='Original Time Series',
+        line=dict(color='gray', width=1)
+    ))
+
+    # Add colored windows for each level
+    levels = set(a['level'] for a in cluster_assignments)
+    colors = ['blue', 'red', 'green']
+
+    for level in sorted(levels):
+        level_assignments = [a for a in cluster_assignments if a['level'] == level]
+
+        for assignment in level_assignments:
+            start = assignment['start_time']
+            end = assignment['end_time']
+            cluster_id = assignment['cluster_id']
+
+            # Add colored rectangle
+            fig.add_vrect(
+                x0=start, x1=end,
+                fillcolor=colors[level],
+                opacity=0.3,
+                layer="below",
+                line_width=0,
+                name=f"Level {level}, Cluster {cluster_id}"
+            )
+
+    fig.update_layout(
+        title="Time Series with Cluster Coloring",
+        xaxis_title="Time",
+        yaxis_title="Value"
+    )
+
+    return fig
+
+
 def create_3d_centroid_plot(centroids: list) -> go.Figure:
     """Create 3D scatter plot of centroids."""
     fig = go.Figure()

@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import plotly.graph_objects as go
-from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results, create_3d_centroid_plot
+from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results, create_3d_centroid_plot, create_clustered_timeseries_plot
 
 
 def test_load_yahoo_data():
@@ -88,3 +88,17 @@ def test_create_3d_centroid_plot():
     fig = create_3d_centroid_plot(centroids)
     assert isinstance(fig, go.Figure)
     assert len(fig.data) == 2  # Two traces
+
+
+def test_create_clustered_timeseries_plot():
+    """Test creation of clustered time series plot."""
+    # Create sample data
+    timeseries = np.sin(np.linspace(0, 10 * np.pi, 100))
+    cluster_assignments = [
+        {'window_idx': 0, 'start_time': 0, 'end_time': 10, 'cluster_id': 0, 'level': 0},
+        {'window_idx': 1, 'start_time': 1, 'end_time': 11, 'cluster_id': 1, 'level': 0}
+    ]
+
+    fig = create_clustered_timeseries_plot(timeseries, cluster_assignments, window_size=10)
+    assert isinstance(fig, go.Figure)
+    assert len(fig.data) >= 1  # At least the original time series
