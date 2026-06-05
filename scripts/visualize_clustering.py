@@ -85,7 +85,8 @@ def extract_clustering_results(clustering_results: dict, window_size: int) -> di
     for level, (idx, codebook) in enumerate(zip(idx_list, codebook_list)):
         # Extract centroids
         for centroid_idx in range(codebook.num_embeddings):
-            centroid_values = codebook.weight[centroid_idx].numpy()
+            w = codebook.weight[centroid_idx]
+            centroid_values = w.numpy() if hasattr(w, 'numpy') else np.asarray(w)
             results['centroids'].append({
                 'centroid_id': f"L{level}_C{centroid_idx}",
                 'level': level,
@@ -95,7 +96,8 @@ def extract_clustering_results(clustering_results: dict, window_size: int) -> di
             })
 
         # Extract cluster assignments
-        for window_idx, cluster_id in enumerate(idx.numpy()):
+        idx_array = idx.numpy() if hasattr(idx, 'numpy') else np.asarray(idx)
+        for window_idx, cluster_id in enumerate(idx_array):
             results['cluster_assignments'].append({
                 'window_idx': window_idx,
                 'start_time': window_idx,
@@ -106,9 +108,10 @@ def extract_clustering_results(clustering_results: dict, window_size: int) -> di
 
         # Extract cluster representatives
         for cluster_id in range(codebook.num_embeddings):
-            centroid_values = codebook.weight[cluster_id].numpy()
+            w = codebook.weight[cluster_id]
+            centroid_values = w.numpy() if hasattr(w, 'numpy') else np.asarray(w)
             # Find sample windows in this cluster
-            sample_mask = idx.numpy() == cluster_id
+            sample_mask = idx_array == cluster_id
             sample_indices = np.where(sample_mask)[0][:5]  # Up to 5 samples
 
             results['cluster_representatives'].append({
@@ -236,3 +239,72 @@ def create_cluster_fragments_plot(cluster_representatives: list) -> go.Figure:
     )
 
     return fig
+
+
+def generate_html_report(timeseries: np.ndarray, clustering_results: dict, output_path: Path) -> Path:
+    """Generate complete HTML report."""
+    # Extract results
+    results = extract_clustering_results(clustering_results, window_size=clustering_results['config'].window_size[0])
+
+    # Create visualizations
+    centroid_plot = create_3d_centroid_plot(results['centroids'])
+    ts_plot = create_clustered_timeseries_plot(timeseries, results['cluster_assignments'], window_size=clustering_results['config'].window_size[0])
+    fragments_plot = create_cluster_fragments_plot(results['cluster_representatives'])
+
+    # Generate HTML
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>RQTAD Clustering Analysis Report</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            .section {{ margin-bottom: 30px; }}
+            .plot {{ width: 100%; height: 600px; }}
+        </style>
+    </head>
+    <body>
+        <h1>RQTAD Multi-Layer Residual Clustering Analysis</h1>
+
+        <div class="section">
+            <h2>Summary</h2>
+            <p><strong>Quantization Levels:</strong> {len(clustering_results['config'].k_list)}</p>
+            <p><strong>Codewords per Level:</strong> {clustering_results['config'].k_list}</p>
+            <p><strong>Window Sizes:</strong> {clustering_results['config'].window_size}</p>
+        </div>
+
+        <div class="section">
+            <h2>3D Centroid Visualization</h2>
+            <div id="centroid-plot" class="plot"></div>
+            <script>
+                var centroidData = {centroid_plot.to_json()};
+                Plotly.newPlot('centroid-plot', centroidData.data, centroidData.layout);
+            </script>
+        </div>
+
+        <div class="section">
+            <h2>Time Series with Cluster Coloring</h2>
+            <div id="ts-plot" class="plot"></div>
+            <script>
+                var tsData = {ts_plot.to_json()};
+                Plotly.newPlot('ts-plot', tsData.data, tsData.layout);
+            </script>
+        </div>
+
+        <div class="section">
+            <h2>Cluster Representative Fragments</h2>
+            <div id="fragments-plot" class="plot"></div>
+            <script>
+                var fragmentsData = {fragments_plot.to_json()};
+                Plotly.newPlot('fragments-plot', fragmentsData.data, fragmentsData.layout);
+            </script>
+        </div>
+    </body>
+    </html>
+    """
+
+    with open(output_path, 'w') as f:
+        f.write(html_content)
+
+    return output_path

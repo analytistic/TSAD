@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results, create_3d_centroid_plot, create_clustered_timeseries_plot, create_cluster_fragments_plot
+from scripts.visualize_clustering import load_yahoo_data, run_rqtad_clustering, extract_clustering_results, create_3d_centroid_plot, create_clustered_timeseries_plot, create_cluster_fragments_plot, generate_html_report
 
 
 def test_load_yahoo_data():
@@ -128,3 +128,29 @@ def test_create_cluster_fragments_plot():
     fig = create_cluster_fragments_plot(cluster_representatives)
     assert isinstance(fig, go.Figure)
     assert len(fig.data) == 2  # Two traces
+
+
+def test_generate_html_report():
+    """Test HTML report generation."""
+    import torch
+    # Create sample data
+    timeseries = np.sin(np.linspace(0, 10 * np.pi, 100))
+
+    clustering_results = {
+        'idx_list': [np.array([0, 1, 0, 1]), np.array([0, 0, 1, 1]), np.array([0, 1, 2, 0])],
+        'codebook_list': [
+            type('Codebook', (), {'num_embeddings': 2, 'weight': torch.randn(2, 10)})(),
+            type('Codebook', (), {'num_embeddings': 2, 'weight': torch.randn(2, 10)})(),
+            type('Codebook', (), {'num_embeddings': 3, 'weight': torch.randn(3, 10)})()
+        ],
+        'config': type('Config', (), {'k_list': [2, 2, 3], 'window_size': [10, 10, 10]})()
+    }
+
+    output_path = Path('test_report.html')
+    try:
+        result_path = generate_html_report(timeseries, clustering_results, output_path)
+        assert result_path == output_path
+        assert output_path.exists()
+        assert output_path.stat().st_size > 0
+    finally:
+        output_path.unlink()
